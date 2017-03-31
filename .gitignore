@@ -2,3 +2,5 @@
 *.so
 *.o
 faster_rcnn_models
+./VGGnet_fast_rcnn_iter_70000.ckpt
+./data/VOCdevkit/
