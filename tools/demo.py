@@ -1,3 +1,5 @@
+#encoding: utf-8 
+
 import _init_paths
 import tensorflow as tf
 from fast_rcnn.config import cfg
@@ -7,8 +9,13 @@ from utils.timer import Timer
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, cv2
+
+# sys.setdefaultencoding('utf8')
+# reload(sys)
+
 import argparse
 from networks.factory import get_network
+
 
 
 CLASSES = ('__background__',
@@ -51,26 +58,60 @@ def vis_detections(im, class_name, dets,ax, thresh=0.5):
     plt.draw()
 
 
+def vis_detections_toText(imagefilePath, im, class_name, dets, thresh=0.5):
+    """Draw detected bounding boxes."""
+    inds = np.where(dets[:, -1] >= thresh)[0]
+    if len(inds) == 0:
+        return
+
+    for i in inds:
+        bbox = dets[i, :4]
+        score = dets[i, -1]
+
+        leftUpX, leftUpY = bbox[0], bbox[1]
+        obj_Width, obj_Height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        #print("(filepath, x, y, width, heigh, class, score) --- (%s, %d, %d, %d, %d, %s, %f)" % (imagefilePath, leftUpX, leftUpY, obj_Width, obj_Height, class_name, score))
+        print("(%s, %d, %d, %d, %d, %s, %f)" % (imagefilePath, leftUpX, leftUpY, obj_Width, obj_Height, class_name, score))
+        # ax.add_patch(
+        #     plt.Rectangle((bbox[0], bbox[1]),
+        #                   bbox[2] - bbox[0],
+        #                   bbox[3] - bbox[1], fill=False,
+        #                   edgecolor='red', linewidth=3.5)
+        #     )
+        # ax.text(bbox[0], bbox[1] - 2,
+        #         '{:s} {:.3f}'.format(class_name, score),
+        #         bbox=dict(facecolor='blue', alpha=0.5),
+        #         fontsize=14, color='white')
+
+    # ax.set_title(('{} detections with '
+    #               'p({} | box) >= {:.1f}').format(class_name, class_name,
+    #                                               thresh),
+    #               fontsize=14)
+    # plt.axis('off')
+    # plt.tight_layout()
+    # plt.draw()
+
+
 def demo(sess, net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
+    # im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
     #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
+    im_file = image_name
     im = cv2.imread(im_file)
-
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
     scores, boxes = im_detect(sess, net, im)
     timer.toc()
-    print ('Detection took {:.3f}s for '
-           '{:d} object proposals').format(timer.total_time, boxes.shape[0])
+    # print ('Detection took {:.3f}s for '
+    #        '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
     # Visualize detections for each class
     im = im[:, :, (2, 1, 0)]
-    fig, ax = plt.subplots(figsize=(12, 12))
-    ax.imshow(im, aspect='equal')
+    # fig, ax = plt.subplots(figsize=(12, 12))
+    # ax.imshow(im, aspect='equal')
 
     CONF_THRESH = 0.8
     NMS_THRESH = 0.3
@@ -82,7 +123,7 @@ def demo(sess, net, image_name):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
-        vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
+        vis_detections_toText(im_file, im, cls, dets, thresh=CONF_THRESH)
 
 def parse_args():
     """Parse input arguments."""
@@ -118,21 +159,33 @@ if __name__ == '__main__':
    
     #sess.run(tf.initialize_all_variables())
 
-    print '\n\nLoaded network {:s}'.format(args.model)
-
     # Warmup on a dummy image
     im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
-    for i in xrange(2):
+    for i in range(2):
         _, _= im_detect(sess, net, im)
 
     # im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
     #             '001763.jpg', '004545.jpg']
-    im_names = ['000456.jpg', '0019.png']
+    dirname = u"/home/guiyang/Downloads/spider-2017-03-31/scene_keypoint_withPerson/花园+人/"
+    for item in os.listdir(dirname):
+        im_name = dirname + item
+        print(im_name)
+        if os.path.exists(im_name) == True:
+            demo(sess, net, im_name)
+            break
 
-    for im_name in im_names:
-        print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-        print 'Demo for data/demo/{}'.format(im_name)
-        demo(sess, net, im_name)
-
-    plt.show()
+    # for im_name in im_names:
+    #     if os.path.exists(im_name) == False:
+    #         print(im_name + " dose not exists !")
+    #         im = cv2.imread(im_name)
+    #         print(im)
+    #         cv2.imshow("sdfds", im)
+    #         cv2.waitkey()
+    #         continue
+    #     print(im_name)
+    #     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+    #     print 'Demo for {}'.format(im_name)
+    #     demo(sess, net, im_name)
+    #     break
+    # plt.show()
 
